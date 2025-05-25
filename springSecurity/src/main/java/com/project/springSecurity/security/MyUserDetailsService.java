@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.*;
 import org.springframework.stereotype.Service;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -15,9 +16,18 @@ public class MyUserDetailsService implements UserDetailsService {
     private UserRepository userRepository;
 
     @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+    public UserDetails loadUserByUsername(String usernameOrEmail) throws UsernameNotFoundException {
+        // First try to find by username
+        Optional<User> userOptional = userRepository.findByUsername(usernameOrEmail);
+
+        // If not found by username, try by email
+        if (userOptional.isEmpty()) {
+            userOptional = userRepository.findByEmail(usernameOrEmail);
+        }
+
+        // If still not found, throw exception
+        User user = userOptional.orElseThrow(() ->
+                new UsernameNotFoundException("User not found with username/email: " + usernameOrEmail));
 
         return new org.springframework.security.core.userdetails.User(
                 user.getUsername(),
